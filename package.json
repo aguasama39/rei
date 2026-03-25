@@ -1,12 +1,12 @@
 {
   "name": "rei",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A clean dark-themed desktop music player",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "dist": "electron-builder --win --x64 --dir",
+    "dist": "electron-builder --win --x64",
     "dist:linux": "electron-builder --linux --x64"
   },
   "dependencies": {

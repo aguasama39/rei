@@ -4,6 +4,7 @@ const fs = require('fs');
 const mm = require('music-metadata');
 
 let mainWindow;
+const watchers = new Map(); // folderPath -> fs.FSWatcher
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -24,7 +25,10 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  restoreWatchedFolders();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -54,7 +58,52 @@ ipcMain.handle('open-folder', async () => {
     properties: ['openDirectory'],
   });
   if (result.canceled) return [];
-  return collectAudioFiles(result.filePaths[0]);
+  const folderPath = result.filePaths[0];
+  watchFolder(folderPath);
+  return collectAudioFiles(folderPath);
+});
+
+// Watch a folder for new audio files
+function watchFolder(folderPath) {
+  if (watchers.has(folderPath)) return;
+  const AUDIO_EXTS = new Set(['.mp3', '.flac', '.ogg', '.wav', '.aac', '.m4a']);
+  const debounceMap = new Map();
+
+  const watcher = fs.watch(folderPath, { recursive: true }, (eventType, filename) => {
+    if (!filename) return;
+    if (!AUDIO_EXTS.has(path.extname(filename).toLowerCase())) return;
+
+    // Debounce per filename to avoid duplicate events
+    if (debounceMap.has(filename)) clearTimeout(debounceMap.get(filename));
+    debounceMap.set(filename, setTimeout(() => {
+      debounceMap.delete(filename);
+      const fullPath = path.join(folderPath, filename);
+      if (fs.existsSync(fullPath)) {
+        mainWindow.webContents.send('folder-file-added', fullPath);
+      }
+    }, 300));
+  });
+
+  watcher.on('error', () => { watchers.delete(folderPath); saveWatchedFolders(); });
+  watchers.set(folderPath, watcher);
+  saveWatchedFolders();
+}
+
+ipcMain.on('unwatch-folder', (_event, folderPath) => {
+  const watcher = watchers.get(folderPath);
+  if (watcher) { watcher.close(); watchers.delete(folderPath); }
+});
+
+// Return any new audio files in watched folders not already in the playlist
+ipcMain.handle('scan-watched-folders', (_event, knownPaths) => {
+  const known = new Set(knownPaths);
+  const newFiles = [];
+  for (const folderPath of watchers.keys()) {
+    for (const file of collectAudioFiles(folderPath)) {
+      if (!known.has(file)) newFiles.push(file);
+    }
+  }
+  return newFiles;
 });
 
 function collectAudioFiles(dir) {
@@ -92,6 +141,7 @@ ipcMain.handle('read-metadata', async (_event, filePath) => {
       album: common.album || 'Unknown Album',
       year: common.year || null,
       genre: common.genre ? common.genre[0] : null,
+      track: common.track?.no || 0,
       duration: format.duration || 0,
       albumArt,
     };
@@ -111,6 +161,21 @@ ipcMain.handle('read-metadata', async (_event, filePath) => {
 
 // Playlist persistence
 const playlistFile = () => path.join(app.getPath('userData'), 'playlist.json');
+const watchedFoldersFile = () => path.join(app.getPath('userData'), 'watched-folders.json');
+
+function saveWatchedFolders() {
+  try {
+    fs.writeFileSync(watchedFoldersFile(), JSON.stringify([...watchers.keys()]));
+  } catch (_) {}
+}
+
+function restoreWatchedFolders() {
+  try {
+    const data = fs.readFileSync(watchedFoldersFile(), 'utf8');
+    const folders = JSON.parse(data);
+    folders.filter(f => fs.existsSync(f)).forEach(f => watchFolder(f));
+  } catch (_) {}
+}
 
 ipcMain.handle('save-playlist', (_event, filePaths) => {
   try {
@@ -122,7 +187,6 @@ ipcMain.handle('load-playlist', () => {
   try {
     const data = fs.readFileSync(playlistFile(), 'utf8');
     const paths = JSON.parse(data);
-    // Filter out files that no longer exist on disk
     return paths.filter(p => fs.existsSync(p));
   } catch (_) {
     return [];

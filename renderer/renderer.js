@@ -35,13 +35,30 @@ function setPlayIcon(playing) {
   iconPause.style.display = playing ? 'block' : 'none';
 }
 
+// ── Search ─────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('search-input');
+let searchQuery = '';
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.toLowerCase();
+  renderPlaylist();
+});
+
 // ── Playlist rendering ─────────────────────────────────────────────────────
 function renderPlaylist() {
   playlistEl.innerHTML = '';
-  playlist.forEach((track, i) => {
+  const filtered = searchQuery
+    ? playlist.filter(t =>
+        t.title.toLowerCase().includes(searchQuery) ||
+        t.artist.toLowerCase().includes(searchQuery) ||
+        t.album.toLowerCase().includes(searchQuery))
+    : playlist;
+
+  filtered.forEach((track, i) => {
+    const realIndex = playlist.indexOf(track);
     const li = document.createElement('li');
-    li.className = 'playlist-item' + (i === currentIndex ? ' active' : '');
-    li.dataset.index = i;
+    li.className = 'playlist-item' + (realIndex === currentIndex ? ' active' : '');
+    li.dataset.index = realIndex;
     li.draggable = true;
 
     li.innerHTML = `
@@ -53,8 +70,8 @@ function renderPlaylist() {
       <span class="pl-duration">${fmt(track.duration)}</span>
     `;
 
-    li.addEventListener('click', () => loadTrack(i));
-    li.addEventListener('dblclick', () => { loadTrack(i); audio.play(); });
+    li.addEventListener('click', () => loadTrack(realIndex));
+    li.addEventListener('dblclick', () => { loadTrack(realIndex); audio.play(); });
 
     // Drag-to-reorder
     li.addEventListener('dragstart', onDragStart);
@@ -283,13 +300,25 @@ function persistPlaylist() {
 }
 
 // ── Add files / folder ─────────────────────────────────────────────────────
+function sortPlaylist() {
+  const current = currentIndex >= 0 ? playlist[currentIndex] : null;
+  playlist.sort((a, b) =>
+    a.artist.localeCompare(b.artist) ||
+    a.album.localeCompare(b.album) ||
+    (a.track || 0) - (b.track || 0) ||
+    a.title.localeCompare(b.title)
+  );
+  if (current) currentIndex = playlist.indexOf(current);
+}
+
 async function addFiles(filePaths) {
   for (const fp of filePaths) {
     if (playlist.some(t => t.filePath === fp)) continue;
     const meta = await window.api.readMetadata(fp);
     playlist.push(meta);
-    renderPlaylist();   // render incrementally as each file loads
   }
+  sortPlaylist();
+  renderPlaylist();
   persistPlaylist();
 }
 
@@ -322,10 +351,22 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   setPlayIcon(false);
 });
 
+// ── Folder auto-watch ──────────────────────────────────────────────────────
+window.api.onFolderFileAdded(async (filePath) => {
+  if (playlist.some(t => t.filePath === filePath)) return;
+  const meta = await window.api.readMetadata(filePath);
+  playlist.push(meta);
+  sortPlaylist();
+  renderPlaylist();
+  persistPlaylist();
+});
+
 // ── Restore playlist on startup ────────────────────────────────────────────
 (async () => {
   const savedPaths = await window.api.loadPlaylist();
   if (savedPaths.length > 0) await addFiles(savedPaths);
+  const newFiles = await window.api.scanWatchedFolders(playlist.map(t => t.filePath));
+  if (newFiles.length > 0) await addFiles(newFiles);
 })();
 
 // ── Window controls ────────────────────────────────────────────────────────

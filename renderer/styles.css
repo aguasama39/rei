@@ -6,8 +6,8 @@
   --surface:   #1e1e1e;
   --surface2:  #2a2a2a;
   --border:    #333;
-  --accent:    #1db954;
-  --accent-dim:#17a349;
+  --accent:    #1d8bf5;
+  --accent-dim:#1570cc;
   --text:      #e8e8e8;
   --text-dim:  #888;
   --danger:    #e05353;
@@ -90,6 +90,27 @@ body {
 .action-btn:hover { background: var(--border); }
 .action-btn.danger { color: var(--danger); border-color: var(--danger); }
 .action-btn.danger:hover { background: var(--danger); color: #fff; }
+
+/* ── Search ───────────────────────────────────────────── */
+.search-wrap {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+#search-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  user-select: text;
+}
+
+#search-input::placeholder { color: var(--text-dim); }
+#search-input:focus { border-color: var(--accent); }
 
 /* ── Playlist ─────────────────────────────────────────── */
 .playlist {
@@ -278,7 +299,7 @@ input[type=range]::-moz-range-thumb {
   transition: color 0.15s, background 0.15s;
 }
 .ctrl-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.ctrl-btn:hover { color: var(--accent); background: rgba(29,185,84,0.1); }
+.ctrl-btn:hover { color: var(--accent); background: rgba(29,139,245,0.1); }
 
 .play-btn {
   width: 52px; height: 52px;
@@ -294,7 +315,7 @@ input[type=range]::-moz-range-thumb {
 .repeat-btn .icon-repeat-one { display: none; }
 
 .repeat-btn[data-mode="none"] { color: var(--text-dim); }
-.repeat-btn[data-mode="none"]:hover { color: var(--accent); background: rgba(29,185,84,0.1); }
+.repeat-btn[data-mode="none"]:hover { color: var(--accent); background: rgba(29,139,245,0.1); }
 
 .repeat-btn[data-mode="all"] { color: var(--accent); }
 .repeat-btn[data-mode="all"] .icon-repeat-all { display: block; }
