@@ -70,8 +70,7 @@ function renderPlaylist() {
       <span class="pl-duration">${fmt(track.duration)}</span>
     `;
 
-    li.addEventListener('click', () => loadTrack(realIndex));
-    li.addEventListener('dblclick', () => { loadTrack(realIndex); audio.play(); });
+    li.addEventListener('click', () => { loadTrack(realIndex); audio.play(); });
 
     // Drag-to-reorder
     li.addEventListener('dragstart', onDragStart);
