@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   openFolder:         ()             => ipcRenderer.invoke('open-folder'),
 
   // ── Metadata ─────────────────────────────────────────────────────────────────
+  openImage:          ()             => ipcRenderer.invoke('open-image'),
   readMetadata:       fp             => ipcRenderer.invoke('read-metadata', fp),
   writeTags:          (fp, tags)     => ipcRenderer.invoke('write-tags', fp, tags),
   readLrc:            fp             => ipcRenderer.invoke('read-lrc', fp),

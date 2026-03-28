@@ -929,18 +929,26 @@ function openTagEditor(index) {
   tagModal.classList.remove('hidden');
 }
 
-document.getElementById('tag-modal-close').addEventListener('click',  () => tagModal.classList.add('hidden'));
-document.getElementById('tag-modal-cancel').addEventListener('click', () => tagModal.classList.add('hidden'));
+function closeTagModal() {
+  delete document.getElementById('tag-art-preview').dataset.pending;
+  tagModal.classList.add('hidden');
+}
+document.getElementById('tag-modal-close').addEventListener('click',  closeTagModal);
+document.getElementById('tag-modal-cancel').addEventListener('click', closeTagModal);
 
 document.getElementById('tag-modal-save').addEventListener('click', async () => {
   if (tagEditIndex < 0) return;
-  const t    = playlist[tagEditIndex];
+  const t       = playlist[tagEditIndex];
+  const artPrev = document.getElementById('tag-art-preview');
+  const pendingArt = artPrev.dataset.pending || null;
+
   const tags = {
-    title:  document.getElementById('tag-title').value,
-    artist: document.getElementById('tag-artist').value,
-    album:  document.getElementById('tag-album').value,
-    year:   document.getElementById('tag-year').value,
-    genre:  document.getElementById('tag-genre').value,
+    title:    document.getElementById('tag-title').value,
+    artist:   document.getElementById('tag-artist').value,
+    album:    document.getElementById('tag-album').value,
+    year:     document.getElementById('tag-year').value,
+    genre:    document.getElementById('tag-genre').value,
+    albumArt: pendingArt || t.albumArt || null,
   };
 
   const res = await window.api.writeTags(t.filePath, tags);
@@ -951,10 +959,24 @@ document.getElementById('tag-modal-save').addEventListener('click', async () => 
 
   // Update in-memory metadata
   Object.assign(t, tags);
+  delete artPrev.dataset.pending;
   if (tagEditIndex === currentIndex) updateNowPlayingUI();
   renderPlaylist();
   tagModal.classList.add('hidden');
   persistActivePlaylist();
+});
+
+// Browse for a local image file
+document.getElementById('btn-browse-art').addEventListener('click', async () => {
+  const dataUrl = await window.api.openImage();
+  if (!dataUrl) return;
+  const artPrev = document.getElementById('tag-art-preview');
+  const artPh   = document.getElementById('tag-art-ph');
+  artPrev.src = dataUrl;
+  artPrev.classList.add('visible');
+  artPh.style.display = 'none';
+  artPrev.dataset.pending = dataUrl; // store for save
+  document.getElementById('tag-note').textContent = 'Art selected. Save to apply.';
 });
 
 // Download album art from MusicBrainz

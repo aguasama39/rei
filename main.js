@@ -160,17 +160,47 @@ ipcMain.handle('read-metadata', async (_e, filePath) => {
   }
 });
 
+// Open image file dialog and return as base64 data URL
+ipcMain.handle('open-image', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }],
+  });
+  if (result.canceled) return null;
+  const filePath = result.filePaths[0];
+  const buf  = fs.readFileSync(filePath);
+  const ext  = path.extname(filePath).slice(1).toLowerCase();
+  const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+  return `data:${mime};base64,${buf.toString('base64')}`;
+});
+
 // Write ID3 tags (MP3 only via node-id3)
 ipcMain.handle('write-tags', (_e, filePath, tags) => {
   if (!NodeID3) return { ok: false, error: 'node-id3 is not installed. Run npm install in the app folder.' };
   if (path.extname(filePath).toLowerCase() !== '.mp3')
     return { ok: false, error: 'Tag writing is only supported for MP3 files.' };
   try {
-    const result = NodeID3.update({
-      title: tags.title, artist: tags.artist, album: tags.album,
-      year: tags.year ? String(tags.year) : undefined,
-      genre: tags.genre,
-    }, filePath);
+    const payload = {
+      title:  tags.title,
+      artist: tags.artist,
+      album:  tags.album,
+      year:   tags.year ? String(tags.year) : undefined,
+      genre:  tags.genre,
+    };
+
+    // Write album art if provided as a data URL
+    if (tags.albumArt && tags.albumArt.startsWith('data:')) {
+      const [header, b64] = tags.albumArt.split(',');
+      const mime = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+      payload.image = {
+        mime,
+        type: { id: 3, name: 'front cover' },
+        description: 'Cover',
+        imageBuffer: Buffer.from(b64, 'base64'),
+      };
+    }
+
+    const result = NodeID3.update(payload, filePath);
     return { ok: result !== false };
   } catch (e) {
     return { ok: false, error: e.message };
