@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; img-src 'self' data: file:; style-src 'self' 'unsafe-inline';" />
+  <title>Rei</title>
+  <link rel="stylesheet" href="mini.css" />
+</head>
+<body>
+  <div class="mini" id="mini">
+    <div class="art-wrap">
+      <img class="art" id="art" src="" alt="" />
+      <div class="art-ph" id="art-ph">♪</div>
+    </div>
+
+    <div class="info">
+      <div class="title"  id="title">No track loaded</div>
+      <div class="artist" id="artist">—</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="btn-prev" title="Previous">&#9664;&#9664;</button>
+      <button class="btn play" id="btn-play" title="Play / Pause">&#9654;</button>
+      <button class="btn" id="btn-next" title="Next">&#9654;&#9654;</button>
+      <button class="btn close" id="btn-close" title="Close">&#10005;</button>
+    </div>
+  </div>
+  <script src="mini.js"></script>
+</body>
+</html>

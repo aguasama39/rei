@@ -1,0 +1,69 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #1e1e1e;
+  --surface: #2a2a2a;
+  --text:    #e8e8e8;
+  --dim:     #888;
+  --accent:  #1d8bf5;
+  --danger:  #e05353;
+}
+
+html, body { width: 300px; height: 80px; overflow: hidden; background: var(--bg); }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  user-select: none;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.mini {
+  display: flex;
+  align-items: center;
+  height: 80px;
+  padding: 0 8px;
+  gap: 8px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  -webkit-app-region: drag;
+  background: var(--bg);
+}
+
+/* ── Art ─────────────────────────────── */
+.art-wrap {
+  position: relative;
+  width: 50px; height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+.art { width: 100%; height: 100%; object-fit: cover; display: none; }
+.art.visible { display: block; }
+.art-ph {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--dim);
+}
+
+/* ── Info ────────────────────────────── */
+.info { flex: 1; overflow: hidden; min-width: 0; -webkit-app-region: drag; }
+.title  { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.artist { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+
+/* ── Controls ────────────────────────── */
+.controls { display: flex; align-items: center; gap: 2px; -webkit-app-region: no-drag; }
+
+.btn {
+  background: none; border: none;
+  color: var(--dim); font-size: 11px;
+  width: 26px; height: 26px;
+  border-radius: 4px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color .15s, background .15s;
+}
+.btn:hover { color: var(--text); background: rgba(255,255,255,.08); }
+.btn.play  { color: var(--accent); font-size: 14px; }
+.btn.close:hover { color: var(--danger); }

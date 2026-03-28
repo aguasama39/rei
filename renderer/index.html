@@ -3,92 +3,282 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; media-src 'self' file: blob:; img-src 'self' data: file:; style-src 'self' 'unsafe-inline';" />
+    content="default-src 'self'; media-src 'self' file: blob:; img-src 'self' data: file:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:;" />
   <title>Rei</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Custom title bar -->
-  <div class="titlebar">
-    <span class="titlebar-title">Rei</span>
-    <div class="titlebar-controls">
-      <button class="tb-btn" id="btn-minimize">&#8722;</button>
-      <button class="tb-btn" id="btn-maximize">&#9633;</button>
-      <button class="tb-btn close" id="btn-close">&#10005;</button>
-    </div>
-  </div>
 
-  <div class="app">
-    <!-- Sidebar / Playlist -->
-    <aside class="sidebar">
-      <div class="sidebar-actions">
-        <button class="action-btn" id="btn-add-files">+ Files</button>
-        <button class="action-btn" id="btn-add-folder">+ Folder</button>
-        <button class="action-btn danger" id="btn-clear">Clear</button>
-      </div>
+<!-- ── Title bar ─────────────────────────────────────────────────── -->
+<div class="titlebar">
+  <span class="titlebar-title">Rei</span>
+  <div class="titlebar-controls">
+    <button class="tb-btn" id="btn-mini" title="Mini player">⧉</button>
+    <button class="tb-btn" id="btn-minimize">&#8722;</button>
+    <button class="tb-btn" id="btn-maximize">&#9633;</button>
+    <button class="tb-btn close" id="btn-close">&#10005;</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ══ SIDEBAR ═══════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Actions row -->
+    <div class="sidebar-actions">
+      <button class="action-btn" id="btn-add-files">+ Files</button>
+      <button class="action-btn" id="btn-add-folder">+ Folder</button>
+      <button class="action-btn" id="btn-export-m3u" title="Export playlist as .m3u">M3U</button>
+      <button class="action-btn danger" id="btn-clear">Clear</button>
+    </div>
+
+    <!-- Sidebar tabs -->
+    <div class="sidebar-tabs">
+      <button class="stab active" data-tab="library">Library</button>
+      <button class="stab" data-tab="queue">Queue</button>
+      <button class="stab" data-tab="browse">Browse</button>
+      <button class="stab" data-tab="playlists">Playlists</button>
+    </div>
+
+    <!-- ── Library tab ─────────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-library">
       <div class="search-wrap">
-        <input type="text" id="search-input" placeholder="Search..." autocomplete="off" />
+        <input type="text" id="search-input" placeholder="Search…" autocomplete="off" />
+      </div>
+      <div class="playlist-toolbar">
+        <span class="active-pl-name" id="active-pl-name">Default</span>
+        <select class="sort-select" id="sort-select" title="Sort by">
+          <option value="artist">Artist</option>
+          <option value="title">Title</option>
+          <option value="album">Album</option>
+          <option value="duration">Duration</option>
+          <option value="bpm">BPM</option>
+        </select>
       </div>
       <ul class="playlist" id="playlist"></ul>
-    </aside>
+    </div>
 
-    <!-- Main panel -->
-    <main class="main-panel">
-      <!-- Album art + info -->
-      <div class="now-playing">
-        <div class="album-art-wrap">
-          <img class="album-art" id="album-art" src="" alt="" />
-          <div class="album-art-placeholder" id="art-placeholder">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="12" cy="12" r="10"/>
-              <circle cx="12" cy="12" r="3"/>
-              <line x1="12" y1="2" x2="12" y2="9"/>
-            </svg>
-          </div>
-        </div>
-        <div class="track-info">
-          <div class="track-title" id="track-title">No track loaded</div>
-          <div class="track-artist" id="track-artist">—</div>
-          <div class="track-meta" id="track-meta"></div>
-        </div>
+    <!-- ── Queue tab ──────────────────────────────────────────── -->
+    <div class="tab-panel hidden" id="panel-queue">
+      <div class="queue-header">
+        <span id="queue-count">Queue empty</span>
+        <button class="small-btn" id="btn-clear-queue">Clear</button>
       </div>
+      <ul class="playlist" id="queue-list"></ul>
+    </div>
 
-      <!-- Seek bar -->
-      <div class="seek-row">
-        <span class="time" id="time-current">0:00</span>
-        <input type="range" class="seek-bar" id="seek-bar" min="0" max="1000" value="0" />
-        <span class="time" id="time-total">0:00</span>
+    <!-- ── Browse tab ─────────────────────────────────────────── -->
+    <div class="tab-panel hidden" id="panel-browse">
+      <div class="browse-subtabs">
+        <button class="btab active" data-btab="artists">Artists</button>
+        <button class="btab" data-btab="albums">Albums</button>
       </div>
+      <div id="browse-content" class="browse-content"></div>
+    </div>
 
-      <!-- Controls -->
-      <div class="controls">
-        <button class="ctrl-btn" id="btn-prev" title="Previous">
-          <svg viewBox="0 0 24 24"><polygon points="19,20 9,12 19,4"/><line x1="5" y1="4" x2="5" y2="20"/></svg>
-        </button>
-        <button class="ctrl-btn play-btn" id="btn-play" title="Play / Pause">
-          <svg class="icon-play" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
-          <svg class="icon-pause" viewBox="0 0 24 24" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-        </button>
-        <button class="ctrl-btn" id="btn-next" title="Next">
-          <svg viewBox="0 0 24 24"><polygon points="5,4 15,12 5,20"/><line x1="19" y1="4" x2="19" y2="20"/></svg>
-        </button>
-        <button class="ctrl-btn repeat-btn" id="btn-repeat" data-mode="none" title="Repeat: Off">
-          <!-- repeat-all icon -->
-          <svg class="icon-repeat-all" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          <!-- repeat-one icon -->
-          <svg class="icon-repeat-one" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/><text x="10" y="14" font-size="7" fill="currentColor" stroke="none" font-weight="bold" font-family="sans-serif">1</text></svg>
-        </button>
-        <div class="volume-wrap">
-          <svg class="vol-icon" viewBox="0 0 24 24"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M15.54,8.46a5,5,0,0,1,0,7.07"/><path d="M19.07,4.93a10,10,0,0,1,0,14.14"/></svg>
-          <input type="range" class="volume-bar" id="volume-bar" min="0" max="100" value="80" />
+    <!-- ── Playlists tab ───────────────────────────────────────── -->
+    <div class="tab-panel hidden" id="panel-playlists">
+      <div class="pl-toolbar">
+        <button class="action-btn" id="btn-new-playlist">+ New</button>
+        <button class="action-btn" id="btn-find-dupes" title="Find duplicate tracks">Dupes</button>
+        <button class="action-btn" id="btn-missing-meta" title="Show tracks with missing metadata">Missing</button>
+      </div>
+      <ul class="playlists-list" id="playlists-list"></ul>
+    </div>
+
+  </aside>
+
+  <!-- ══ MAIN PANEL ════════════════════════════════════════════════ -->
+  <main class="main-panel">
+
+    <!-- Now playing -->
+    <div class="now-playing">
+      <div class="album-art-wrap" id="art-wrap">
+        <img class="album-art" id="album-art" src="" alt="" />
+        <div class="album-art-placeholder" id="art-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+            <line x1="12" y1="2" x2="12" y2="9"/>
+          </svg>
         </div>
       </div>
-    </main>
+
+      <!-- Lyrics panel (overlays the art area) -->
+      <div class="lyrics-panel hidden" id="lyrics-panel">
+        <div class="lyrics-inner" id="lyrics-inner"></div>
+      </div>
+
+      <div class="track-info">
+        <div class="track-title"  id="track-title">No track loaded</div>
+        <div class="track-artist" id="track-artist">—</div>
+        <div class="track-meta"   id="track-meta"></div>
+        <div class="track-extras">
+          <button class="star-btn" id="btn-star" title="Favourite">☆</button>
+          <span class="label-dot hidden" id="label-dot"></span>
+          <span class="bpm-badge hidden" id="bpm-badge"></span>
+          <button class="extra-btn" id="btn-edit-tags" title="Edit metadata">✏️</button>
+          <button class="extra-btn" id="btn-show-file" title="Show in Explorer">📂</button>
+          <button class="extra-btn" id="btn-similar" title="Show similar tracks">≈</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visualiser canvas (hidden until toggled) -->
+    <canvas class="visualizer hidden" id="visualizer" height="56"></canvas>
+
+    <!-- Seek bar -->
+    <div class="seek-row">
+      <span class="time" id="time-current">0:00</span>
+      <input type="range" class="seek-bar" id="seek-bar" min="0" max="1000" value="0" />
+      <span class="time" id="time-total">0:00</span>
+    </div>
+
+    <!-- Sleep timer display -->
+    <div class="sleep-display hidden" id="sleep-display">
+      💤 <span id="sleep-countdown"></span>
+    </div>
+
+    <!-- Main controls -->
+    <div class="controls">
+      <button class="ctrl-btn shuffle-btn" id="btn-shuffle" data-on="false" title="Shuffle">
+        <svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      </button>
+      <button class="ctrl-btn" id="btn-prev" title="Previous">
+        <svg viewBox="0 0 24 24"><polygon points="19,20 9,12 19,4"/><line x1="5" y1="4" x2="5" y2="20"/></svg>
+      </button>
+      <button class="ctrl-btn play-btn" id="btn-play" title="Play / Pause">
+        <svg class="icon-play"  viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+        <svg class="icon-pause" viewBox="0 0 24 24" style="display:none">
+          <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+        </svg>
+      </button>
+      <button class="ctrl-btn" id="btn-next" title="Next">
+        <svg viewBox="0 0 24 24"><polygon points="5,4 15,12 5,20"/><line x1="19" y1="4" x2="19" y2="20"/></svg>
+      </button>
+      <button class="ctrl-btn repeat-btn" id="btn-repeat" data-mode="none" title="Repeat: Off">
+        <svg class="icon-repeat-all" viewBox="0 0 24 24">
+          <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        <svg class="icon-repeat-one" viewBox="0 0 24 24">
+          <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          <text x="10" y="14" font-size="7" fill="currentColor" stroke="none" font-weight="bold" font-family="sans-serif">1</text>
+        </svg>
+      </button>
+
+      <div class="speed-wrap" title="Playback speed">
+        <input type="range" class="speed-bar" id="speed-bar" min="50" max="200" value="100" step="5" />
+        <span class="speed-label" id="speed-label">1.0×</span>
+      </div>
+
+      <div class="volume-wrap">
+        <svg class="vol-icon" viewBox="0 0 24 24">
+          <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+          <path d="M15.54,8.46a5,5,0,0,1,0,7.07"/>
+          <path d="M19.07,4.93a10,10,0,0,1,0,14.14"/>
+        </svg>
+        <input type="range" class="volume-bar" id="volume-bar" min="0" max="100" value="80" />
+      </div>
+
+      <!-- Extra feature buttons -->
+      <div class="extra-controls">
+        <button class="ctrl-btn small-icon" id="btn-viz"    title="Toggle visualiser">◈</button>
+        <button class="ctrl-btn small-icon" id="btn-lyrics" title="Toggle lyrics">♬</button>
+        <button class="ctrl-btn small-icon" id="btn-sleep"  title="Sleep timer">💤</button>
+      </div>
+    </div>
+
+
+    <!-- Sleep timer dropdown -->
+    <div class="sleep-dropdown hidden" id="sleep-dropdown">
+      <button class="sleep-opt" data-min="15">15 min</button>
+      <button class="sleep-opt" data-min="30">30 min</button>
+      <button class="sleep-opt" data-min="45">45 min</button>
+      <button class="sleep-opt" data-min="60">60 min</button>
+      <button class="sleep-opt" data-min="0">Off</button>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Context menu ───────────────────────────────────────────────── -->
+<div class="ctx-menu hidden" id="ctx-menu">
+  <div class="ctx-item" id="ctx-play">▶ Play</div>
+  <div class="ctx-item" id="ctx-next">⏭ Play Next</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-star">☆ Favourite</div>
+  <div class="ctx-item ctx-sub-trigger" id="ctx-label-trigger">
+    🏷 Set Label ▸
+    <div class="ctx-submenu" id="ctx-label-sub">
+      <div class="ctx-item label-opt" data-color="red">● Red</div>
+      <div class="ctx-item label-opt" data-color="orange">● Orange</div>
+      <div class="ctx-item label-opt" data-color="yellow">● Yellow</div>
+      <div class="ctx-item label-opt" data-color="green">● Green</div>
+      <div class="ctx-item label-opt" data-color="blue">● Blue</div>
+      <div class="ctx-item label-opt" data-color="">✕ None</div>
+    </div>
   </div>
+  <div class="ctx-item ctx-sub-trigger" id="ctx-addpl-trigger">
+    ➕ Add to Playlist ▸
+    <div class="ctx-submenu" id="ctx-addpl-sub"></div>
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-edit">✏️ Edit Metadata</div>
+  <div class="ctx-item" id="ctx-show">📂 Show in Explorer</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-remove">🗑 Remove</div>
+</div>
 
-  <!-- Hidden audio element -->
-  <audio id="audio"></audio>
+<!-- ── Tag editor modal ───────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="tag-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Edit Metadata</span>
+      <button class="modal-close" id="tag-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-art-wrap">
+        <img class="modal-art" id="tag-art-preview" src="" alt="" />
+        <div class="modal-art-ph" id="tag-art-ph">♪</div>
+        <button class="small-btn" id="btn-fetch-art" title="Download from MusicBrainz">Download Art</button>
+      </div>
+      <div class="modal-fields">
+        <label>Title  <input type="text" id="tag-title"  /></label>
+        <label>Artist <input type="text" id="tag-artist" /></label>
+        <label>Album  <input type="text" id="tag-album"  /></label>
+        <label>Year   <input type="text" id="tag-year"   maxlength="4" /></label>
+        <label>Genre  <input type="text" id="tag-genre"  /></label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="modal-note" id="tag-note"></span>
+      <button class="action-btn danger" id="tag-modal-cancel">Cancel</button>
+      <button class="action-btn" id="tag-modal-save">Save</button>
+    </div>
+  </div>
+</div>
 
-  <script src="renderer.js"></script>
+<!-- ── Duplicate detection modal ─────────────────────────────────── -->
+<div class="modal-overlay hidden" id="dupes-modal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <span>Duplicate Tracks</span>
+      <button class="modal-close" id="dupes-modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="dupes-body"></div>
+    <div class="modal-footer">
+      <button class="action-btn danger" id="dupes-modal-close2">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Hidden audio elements ─────────────────────────────────────── -->
+<audio id="audio"></audio>
+<audio id="audio-b"></audio>
+
+<script type="module" src="renderer.js"></script>
 </body>
 </html>
