@@ -64,6 +64,11 @@ const vizCtx     = vizCanvas.getContext('2d');
 let   vizEnabled = false;
 let   vizRafId   = null;
 
+const VIZ_BARS   = 64;
+const VIZ_GAP    = 2;
+const _peaks     = new Float32Array(VIZ_BARS);
+const _peakVel   = new Float32Array(VIZ_BARS);
+
 function drawVisualizer() {
   if (!vizEnabled) return;
   vizRafId = requestAnimationFrame(drawVisualizer);
@@ -73,48 +78,52 @@ function drawVisualizer() {
   const W = vizCanvas.width, H = vizCanvas.height;
   vizCtx.clearRect(0, 0, W, H);
 
-  const barW = W / (data.length / 2.5);
-  const count = Math.floor(W / (barW + 1));
-  for (let i = 0; i < count; i++) {
-    const v  = data[Math.floor(i * data.length / count)] / 255;
-    const h  = v * H;
-    const hue = 200 + v * 40;
-    vizCtx.fillStyle = `hsl(${hue},80%,55%)`;
-    vizCtx.fillRect(i * (barW + 1), H - h, barW, h);
+  const barW = (W - VIZ_GAP * (VIZ_BARS - 1)) / VIZ_BARS;
+  const brad = Math.min(barW / 2, 3);
+
+  // Gradient derived from album art color
+  const { r, g, b } = _vizColor;
+  const grad = vizCtx.createLinearGradient(0, H, 0, 0);
+  grad.addColorStop(0,   `rgba(${r}, ${g}, ${b}, 1)`);
+  grad.addColorStop(0.5, `rgba(${Math.min(255,r+50)}, ${Math.min(255,g+50)}, ${Math.min(255,b+50)}, 0.9)`);
+  grad.addColorStop(1,   `rgba(${Math.min(255,r+100)}, ${Math.min(255,g+100)}, ${Math.min(255,b+100)}, 0.75)`);
+
+  for (let i = 0; i < VIZ_BARS; i++) {
+    const v = data[Math.floor(i * data.length / VIZ_BARS)] / 255;
+    const h = Math.max(2, v * (H - 6));
+    const x = i * (barW + VIZ_GAP);
+    const y = H - h;
+
+    // Bar with rounded top
+    vizCtx.fillStyle = grad;
+    vizCtx.beginPath();
+    vizCtx.roundRect(x, y, barW, h, [brad, brad, 1, 1]);
+    vizCtx.fill();
+
+    // Peak dot — rises instantly, falls with gravity
+    if (h > _peaks[i]) {
+      _peaks[i]   = h;
+      _peakVel[i] = 0;
+    } else {
+      _peakVel[i] += 0.35;
+      _peaks[i]    = Math.max(0, _peaks[i] - _peakVel[i]);
+    }
+
+    if (_peaks[i] > 3) {
+      vizCtx.fillStyle = `rgba(${Math.min(255,r+120)}, ${Math.min(255,g+120)}, ${Math.min(255,b+120)}, 0.95)`;
+      vizCtx.beginPath();
+      vizCtx.roundRect(x, H - _peaks[i] - 3, barW, 2.5, 1);
+      vizCtx.fill();
+    }
   }
 }
 
 function resizeViz() {
   vizCanvas.width = vizCanvas.offsetWidth;
+  _peaks.fill(0);
+  _peakVel.fill(0);
 }
 
-// ── Sleep timer ───────────────────────────────────────────────────────────────
-let sleepEnd = null;
-let sleepInterval = null;
-const sleepDisplay    = document.getElementById('sleep-display');
-const sleepCountdown  = document.getElementById('sleep-countdown');
-
-function setSleepTimer(minutes) {
-  clearInterval(sleepInterval);
-  if (!minutes) { sleepEnd = null; sleepDisplay.classList.add('hidden'); return; }
-  sleepEnd = Date.now() + minutes * 60_000;
-  sleepInterval = setInterval(tickSleep, 1000);
-  sleepDisplay.classList.remove('hidden');
-  tickSleep();
-}
-
-function tickSleep() {
-  if (!sleepEnd) return;
-  const rem = sleepEnd - Date.now();
-  if (rem <= 0) {
-    clearInterval(sleepInterval);
-    sleepEnd = null; sleepDisplay.classList.add('hidden');
-    fadeGain(getPrimaryGain(), 0, 2, () => { audio.pause(); setPlayIcon(false); });
-    return;
-  }
-  const m = Math.floor(rem / 60_000), s = Math.floor((rem % 60_000) / 1000);
-  sleepCountdown.textContent = `${m}:${s.toString().padStart(2,'0')}`;
-}
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const albumArtEl    = document.getElementById('album-art');
@@ -126,8 +135,6 @@ const seekBar       = document.getElementById('seek-bar');
 const timeCurrent   = document.getElementById('time-current');
 const timeTotal     = document.getElementById('time-total');
 const volumeBar     = document.getElementById('volume-bar');
-const speedBar      = document.getElementById('speed-bar');
-const speedLabel    = document.getElementById('speed-label');
 const btnPlay       = document.getElementById('btn-play');
 const iconPlay      = btnPlay.querySelector('.icon-play');
 const iconPause     = btnPlay.querySelector('.icon-pause');
@@ -149,7 +156,6 @@ const queueList     = document.getElementById('queue-list');
 const queueCount    = document.getElementById('queue-count');
 const browseContent = document.getElementById('browse-content');
 const playlistsEl   = document.getElementById('playlists-list');
-const sleepDropdown = document.getElementById('sleep-dropdown');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(secs) {
@@ -175,11 +181,11 @@ const _offCanvas = document.createElement('canvas');
 _offCanvas.width = _offCanvas.height = 16;
 const _offCtx = _offCanvas.getContext('2d');
 
+// Extracted album color used by the visualizer
+let _vizColor = { r: 29, g: 139, b: 245 }; // default: accent blue
+
 function applyDynamicBg(albumArtSrc) {
-  if (!albumArtSrc) {
-    document.querySelector('.main-panel').style.background = '';
-    return;
-  }
+  if (!albumArtSrc) { _vizColor = { r: 29, g: 139, b: 245 }; return; }
   const img = new Image();
   img.onload = () => {
     _offCtx.drawImage(img, 0, 0, 16, 16);
@@ -187,9 +193,7 @@ function applyDynamicBg(albumArtSrc) {
     let r = 0, g = 0, b = 0;
     for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i+1]; b += px[i+2]; }
     const n = px.length / 4;
-    r = Math.round(r/n); g = Math.round(g/n); b = Math.round(b/n);
-    document.querySelector('.main-panel').style.background =
-      `linear-gradient(to bottom, rgba(${r},${g},${b},0.22) 0%, #121212 55%)`;
+    _vizColor = { r: Math.round(r/n), g: Math.round(g/n), b: Math.round(b/n) };
   };
   img.src = albumArtSrc;
 }
@@ -718,14 +722,6 @@ setVolume(audio.volume);
 
 volumeBar.addEventListener('input', () => setVolume(volumeBar.value / 100));
 
-// ── Speed ─────────────────────────────────────────────────────────────────────
-speedBar.addEventListener('input', () => {
-  const rate = speedBar.value / 100;
-  audio.playbackRate = rate;
-  audioB.playbackRate = rate;
-  speedLabel.textContent = rate.toFixed(1) + '×';
-});
-
 // ── Play / pause (with gain fade) ─────────────────────────────────────────────
 btnPlay.addEventListener('click', () => {
   resumeCtx();
@@ -782,22 +778,6 @@ document.getElementById('btn-viz').addEventListener('click', () => {
 // ── Lyrics toggle ─────────────────────────────────────────────────────────────
 document.getElementById('btn-lyrics').addEventListener('click', () => {
   lyricsPanel.classList.toggle('hidden');
-});
-
-// ── Sleep timer ───────────────────────────────────────────────────────────────
-document.getElementById('btn-sleep').addEventListener('click', e => {
-  e.stopPropagation();
-  const rect = e.currentTarget.getBoundingClientRect();
-  sleepDropdown.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
-  sleepDropdown.style.right  = (window.innerWidth - rect.right) + 'px';
-  sleepDropdown.classList.toggle('hidden');
-});
-
-sleepDropdown.querySelectorAll('.sleep-opt').forEach(btn => {
-  btn.addEventListener('click', () => {
-    setSleepTimer(parseInt(btn.dataset.min));
-    sleepDropdown.classList.add('hidden');
-  });
 });
 
 // ── Mini player ───────────────────────────────────────────────────────────────
@@ -1165,7 +1145,7 @@ document.addEventListener('keydown', e => {
     case 'n': case 'N': document.getElementById('btn-next').click(); break;
     case 'p': case 'P': document.getElementById('btn-prev').click(); break;
     case 's': case 'S': btnShuffle.click(); break;
-    case 'Escape': hideCtxMenu(); sleepDropdown.classList.add('hidden'); tagModal.classList.add('hidden'); break;
+    case 'Escape': hideCtxMenu(); tagModal.classList.add('hidden'); break;
   }
 });
 
@@ -1200,7 +1180,6 @@ function saveSession() {
     volume:      audio.volume,
     repeatMode,
     shuffleOn,
-    speed:       audio.playbackRate,
   });
 }
 
@@ -1211,10 +1190,6 @@ document.getElementById('btn-minimize').addEventListener('click', () => window.a
 document.getElementById('btn-maximize').addEventListener('click', () => window.api.windowMaximize());
 document.getElementById('btn-close').addEventListener('click',    () => { saveSession(); window.api.windowClose(); });
 
-// Dismiss dropdowns on outside click
-document.addEventListener('click', e => {
-  if (!document.getElementById('btn-sleep').contains(e.target)) sleepDropdown.classList.add('hidden');
-});
 
 // ── Startup restore ───────────────────────────────────────────────────────────
 (async () => {
@@ -1254,7 +1229,6 @@ document.addEventListener('click', e => {
   // Restore session (position only, do not auto-play)
   const session = await window.api.loadSession();
   if (session) {
-    if (session.speed) { audio.playbackRate = session.speed; speedBar.value = session.speed * 100; speedLabel.textContent = session.speed.toFixed(1) + '×'; }
     if (session.volume !== undefined) { setVolume(session.volume); volumeBar.value = session.volume * 100; }
     if (session.repeatMode) { repeatMode = session.repeatMode; btnRepeat.dataset.mode = repeatMode; }
     if (session.shuffleOn)  { shuffleOn  = true; btnShuffle.dataset.on = 'true'; rebuildShuffleOrder(); }
