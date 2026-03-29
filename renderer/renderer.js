@@ -176,24 +176,66 @@ function setPlayIcon(playing) {
   iconPause.style.display = playing ? 'block' : 'none';
 }
 
-// ── Dynamic background from album art ────────────────────────────────────────
+// ── Dynamic color from album art (color quantization) ─────────────────────────
 const _offCanvas = document.createElement('canvas');
-_offCanvas.width = _offCanvas.height = 16;
+_offCanvas.width = _offCanvas.height = 64; // larger sample for better quantization
 const _offCtx = _offCanvas.getContext('2d');
 
-// Extracted album color used by the visualizer
 let _vizColor = { r: 29, g: 139, b: 245 }; // default: accent blue
 
+// Popularity-based color quantization:
+// 1. Sample all pixels from a 64×64 downscale of the art
+// 2. Skip near-black, near-white, and low-saturation (grey) pixels
+// 3. Quantize remaining colors into buckets and return the most common one
+// This finds the dominant *accent* color rather than a muddy average.
 function applyDynamicBg(albumArtSrc) {
   if (!albumArtSrc) { _vizColor = { r: 29, g: 139, b: 245 }; return; }
   const img = new Image();
   img.onload = () => {
-    _offCtx.drawImage(img, 0, 0, 16, 16);
-    const px = _offCtx.getImageData(0, 0, 16, 16).data;
-    let r = 0, g = 0, b = 0;
-    for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i+1]; b += px[i+2]; }
-    const n = px.length / 4;
-    _vizColor = { r: Math.round(r/n), g: Math.round(g/n), b: Math.round(b/n) };
+    const SIZE = 64;
+    _offCtx.drawImage(img, 0, 0, SIZE, SIZE);
+    const px = _offCtx.getImageData(0, 0, SIZE, SIZE).data;
+
+    const BUCKET = 20; // ~13 buckets per channel — fine enough, fast enough
+    const counts = {};
+
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], g = px[i + 1], b = px[i + 2];
+
+      // Compute lightness and saturation to filter boring pixels
+      const max = Math.max(r, g, b) / 255;
+      const min = Math.min(r, g, b) / 255;
+      const l   = (max + min) / 2;
+      const s   = max === min ? 0
+        : l > 0.5 ? (max - min) / (2 - max - min)
+                  : (max - min) / (max + min);
+
+      if (l < 0.12 || l > 0.92 || s < 0.25) continue; // skip dark, light, grey
+
+      const key = `${Math.floor(r / BUCKET)},${Math.floor(g / BUCKET)},${Math.floor(b / BUCKET)}`;
+      counts[key] = (counts[key] || 0) + 1;
+    }
+
+    // Pick the most populated bucket
+    let bestKey = null, bestCount = 0;
+    for (const [key, n] of Object.entries(counts)) {
+      if (n > bestCount) { bestCount = n; bestKey = key; }
+    }
+
+    if (bestKey) {
+      const [rb, gb, bb] = bestKey.split(',').map(Number);
+      _vizColor = {
+        r: rb * BUCKET + Math.round(BUCKET / 2),
+        g: gb * BUCKET + Math.round(BUCKET / 2),
+        b: bb * BUCKET + Math.round(BUCKET / 2),
+      };
+    } else {
+      // Fallback: plain average (covers with no saturated colors e.g. b&w photos)
+      let r = 0, g = 0, b = 0;
+      const n = px.length / 4;
+      for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i + 1]; b += px[i + 2]; }
+      _vizColor = { r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) };
+    }
   };
   img.src = albumArtSrc;
 }
