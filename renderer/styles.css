@@ -296,8 +296,10 @@ body {
 
 /* ── Visualiser ────────────────────────────────────────────────────── */
 .visualizer {
-  width: 100%; max-width: 460px; border-radius: 6px;
-  background: var(--surface2);
+  width: 100%; max-width: 460px; height: 80px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
 }
 
 /* ── Seek bar ──────────────────────────────────────────────────────── */
@@ -320,12 +322,6 @@ input[type=range]::-webkit-slider-thumb {
   background: var(--accent); margin-top: -4px; transition: transform .1s;
 }
 input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.25); }
-
-/* ── Sleep display ─────────────────────────────────────────────────── */
-.sleep-display {
-  font-size: 11px; color: var(--text-dim); background: var(--surface2);
-  padding: 4px 12px; border-radius: 12px; border: 1px solid var(--border);
-}
 
 /* ── Controls ──────────────────────────────────────────────────────── */
 .controls {
@@ -365,11 +361,6 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.25); }
 .repeat-btn[data-mode="one"]  .icon-repeat-all { display: none; }
 .repeat-btn[data-mode="one"]  .icon-repeat-one { display: block; }
 
-/* Speed control */
-.speed-wrap { display: flex; align-items: center; gap: 5px; }
-.speed-bar  { width: 60px; flex: none; }
-.speed-label { font-size: 10px; color: var(--text-dim); min-width: 28px; }
-
 /* Volume */
 .volume-wrap { display: flex; align-items: center; gap: 6px; }
 .vol-icon { width: 16px; height: 16px; fill: none; stroke: var(--text-dim); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
@@ -377,19 +368,6 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.25); }
 
 .extra-controls { display: flex; gap: 4px; }
 
-
-/* ── Sleep dropdown ────────────────────────────────────────────────── */
-.sleep-dropdown {
-  position: absolute; background: var(--surface2);
-  border: 1px solid var(--border); border-radius: var(--radius);
-  overflow: hidden; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-}
-.sleep-opt {
-  display: block; width: 100%; padding: 8px 16px; text-align: left;
-  background: none; border: none; color: var(--text); font-size: 12px;
-  cursor: pointer; transition: background .12s;
-}
-.sleep-opt:hover { background: var(--surface3); }
 
 /* ── Context menu ──────────────────────────────────────────────────── */
 .ctx-menu {

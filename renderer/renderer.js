@@ -275,10 +275,20 @@ function rebuildShuffleOrder() {
 function renderPlaylist() {
   playlistEl.innerHTML = '';
   const q   = searchQuery;
-  const src = q ? playlist.filter(t =>
-    t.title.toLowerCase().includes(q) ||
-    t.artist.toLowerCase().includes(q) ||
-    t.album.toLowerCase().includes(q)) : playlist;
+  let src;
+  if (q) {
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('\\b' + escaped + '\\b', 'i');
+    // If the query matches any artist name, show only those artists' songs
+    const hasArtistMatch = playlist.some(t => re.test(t.artist));
+    if (hasArtistMatch) {
+      src = playlist.filter(t => re.test(t.artist));
+    } else {
+      src = playlist.filter(t => re.test(t.title) || re.test(t.album));
+    }
+  } else {
+    src = playlist;
+  }
 
   src.forEach((track, visIdx) => {
     const realIdx = playlist.indexOf(track);

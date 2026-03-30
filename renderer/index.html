@@ -125,7 +125,7 @@
     </div>
 
     <!-- Visualiser canvas (hidden until toggled) -->
-    <canvas class="visualizer hidden" id="visualizer" height="56"></canvas>
+    <canvas class="visualizer hidden" id="visualizer" height="80"></canvas>
 
     <!-- Seek bar -->
     <div class="seek-row">
@@ -134,17 +134,8 @@
       <span class="time" id="time-total">0:00</span>
     </div>
 
-    <!-- Sleep timer display -->
-    <div class="sleep-display hidden" id="sleep-display">
-      💤 <span id="sleep-countdown"></span>
-    </div>
-
     <!-- Main controls -->
     <div class="controls">
-      <button class="ctrl-btn shuffle-btn" id="btn-shuffle" data-on="false" title="Shuffle">
-        <svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
-        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
-      </button>
       <button class="ctrl-btn" id="btn-prev" title="Previous">
         <svg viewBox="0 0 24 24"><polygon points="19,20 9,12 19,4"/><line x1="5" y1="4" x2="5" y2="20"/></svg>
       </button>
@@ -168,11 +159,10 @@
           <text x="10" y="14" font-size="7" fill="currentColor" stroke="none" font-weight="bold" font-family="sans-serif">1</text>
         </svg>
       </button>
-
-      <div class="speed-wrap" title="Playback speed">
-        <input type="range" class="speed-bar" id="speed-bar" min="50" max="200" value="100" step="5" />
-        <span class="speed-label" id="speed-label">1.0×</span>
-      </div>
+      <button class="ctrl-btn shuffle-btn" id="btn-shuffle" data-on="false" title="Shuffle">
+        <svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      </button>
 
       <div class="volume-wrap">
         <svg class="vol-icon" viewBox="0 0 24 24">
@@ -187,18 +177,7 @@
       <div class="extra-controls">
         <button class="ctrl-btn small-icon" id="btn-viz"    title="Toggle visualiser">◈</button>
         <button class="ctrl-btn small-icon" id="btn-lyrics" title="Toggle lyrics">♬</button>
-        <button class="ctrl-btn small-icon" id="btn-sleep"  title="Sleep timer">💤</button>
       </div>
-    </div>
-
-
-    <!-- Sleep timer dropdown -->
-    <div class="sleep-dropdown hidden" id="sleep-dropdown">
-      <button class="sleep-opt" data-min="15">15 min</button>
-      <button class="sleep-opt" data-min="30">30 min</button>
-      <button class="sleep-opt" data-min="45">45 min</button>
-      <button class="sleep-opt" data-min="60">60 min</button>
-      <button class="sleep-opt" data-min="0">Off</button>
     </div>
 
   </main>
