@@ -255,12 +255,13 @@ function sortPlaylist() {
   const cur = currentIndex >= 0 ? playlist[currentIndex] : null;
   const key = sortSelect.value;
   playlist.sort((a, b) => {
-    if (key === 'title')    return a.title.localeCompare(b.title);
-    if (key === 'album')    return a.album.localeCompare(b.album) || (a.track||0)-(b.track||0);
+    const ci = { sensitivity: 'base' };
+    if (key === 'title')    return a.title.localeCompare(b.title, undefined, ci);
+    if (key === 'album')    return a.album.localeCompare(b.album, undefined, ci) || (a.track||0)-(b.track||0);
     if (key === 'duration') return (a.duration||0) - (b.duration||0);
     if (key === 'bpm')      return (getBPM(b.filePath)||0) - (getBPM(a.filePath)||0);
     // default: artist
-    return a.artist.localeCompare(b.artist) || a.album.localeCompare(b.album) || (a.track||0)-(b.track||0) || a.title.localeCompare(b.title);
+    return a.artist.localeCompare(b.artist, undefined, ci) || a.album.localeCompare(b.album, undefined, ci) || (a.track||0)-(b.track||0) || a.title.localeCompare(b.title, undefined, ci);
   });
   if (cur) currentIndex = playlist.indexOf(cur);
   rebuildShuffleOrder();
