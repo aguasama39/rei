@@ -26,6 +26,12 @@ let cf = {
 let playlist     = [];   // metadata objects for active playlist
 let allTracks    = [];   // union of all named playlist tracks (for browse / auto-playlists)
 let currentIndex = -1;
+let metaCache    = {};   // filePath → metadata (no albumArt) for instant startup
+let _metaCacheTimer = null;
+function scheduleMetaCacheSave() {
+  clearTimeout(_metaCacheTimer);
+  _metaCacheTimer = setTimeout(() => window.api.saveMetadataCache(metaCache), 2000);
+}
 let shuffleOn    = false;
 let shuffleOrder = [];
 let repeatMode   = 'none'; // 'none' | 'all' | 'one'
@@ -586,6 +592,14 @@ function loadTrack(index, playCrossfade = false) {
   timeCurrent.textContent = '0:00';
   timeTotal.textContent   = fmt(track.duration);
 
+  // Lazy-load albumArt if not yet in memory (loaded from cache)
+  if (!track.albumArt) {
+    window.api.readMetadata(track.filePath).then(full => {
+      track.albumArt = full.albumArt;
+      if (currentIndex === index) updateNowPlayingUI();
+    });
+  }
+
   updateNowPlayingUI();
   loadLyrics(track.filePath);
 
@@ -931,6 +945,23 @@ document.getElementById('ctx-remove').addEventListener('click', () => {
   if (ctxTarget >= 0) removeTrackFromActive(ctxTarget);
   hideCtxMenu();
 });
+document.getElementById('ctx-delete').addEventListener('click', async () => {
+  const fp = playlist[ctxTarget]?.filePath;
+  if (!fp) { hideCtxMenu(); return; }
+  if (!confirm(`Move to Recycle Bin?\n\n${fp}`)) { hideCtxMenu(); return; }
+  const idx = ctxTarget;
+  hideCtxMenu();
+  const res = await window.api.deleteFile(fp);
+  if (res.ok) {
+    removeTrackFromActive(idx);
+    allTracks = allTracks.filter(t => t.filePath !== fp);
+    delete metaCache[fp];
+    scheduleMetaCacheSave();
+    renderBrowse();
+  } else {
+    alert(`Could not delete file: ${res.error}`);
+  }
+});
 
 document.addEventListener('click',       e => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
 document.addEventListener('contextmenu', e => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
@@ -1219,6 +1250,10 @@ async function addFiles(filePaths) {
     const meta = await window.api.readMetadata(fp);
     allTracks.push(meta);
     if (!playlist.some(t => t.filePath === fp)) playlist.push(meta);
+    // Cache without albumArt to keep file size small
+    const { albumArt, ...cacheable } = meta;
+    metaCache[fp] = cacheable;
+    scheduleMetaCacheSave();
   }
   sortPlaylist(); renderPlaylist(); persistActivePlaylist();
   renderBrowse();
@@ -1249,8 +1284,9 @@ document.getElementById('btn-close').addEventListener('click',    () => { saveSe
   // Both elements must exist before init — they're in the HTML
   audio.addEventListener('play', () => { resumeCtx(); }, { once: true });
 
-  // Load library data
+  // Load library data and metadata cache
   await loadLibrary();
+  metaCache = (await window.api.loadMetadataCache()) || {};
 
   // Restore saved tracks from library, filtering out deleted files
   const activeId   = getActiveId();
@@ -1269,14 +1305,29 @@ document.getElementById('btn-close').addEventListener('click',    () => { saveSe
     if (existing.length !== pl.tracks.length) setPlaylistTracks(id, existing);
   }
 
-  if (savedPaths.length) {
-    await addFiles(savedPaths);
-    if (rawPaths.length === 0) setPlaylistTracks(activeId, savedPaths);
+  // Populate from cache instantly, collect uncached paths for background loading
+  const uncachedPaths = [];
+  for (const fp of savedPaths) {
+    if (metaCache[fp]) {
+      const track = { ...metaCache[fp], albumArt: null };
+      allTracks.push(track);
+      playlist.push(track);
+    } else {
+      uncachedPaths.push(fp);
+    }
   }
+  if (rawPaths.length === 0 && savedPaths.length) setPlaylistTracks(activeId, savedPaths);
 
-  // Scan watched folders for new files
-  const newFiles = await window.api.scanWatchedFolders(allTracks.map(t => t.filePath));
-  if (newFiles.length) await addFiles(newFiles);
+  // Render immediately from cache
+  sortPlaylist(); renderPlaylist(); renderBrowse();
+
+  // Load uncached tracks in background
+  if (uncachedPaths.length) addFiles(uncachedPaths);
+
+  // Scan watched folders for new files in background
+  window.api.scanWatchedFolders(allTracks.map(t => t.filePath)).then(newFiles => {
+    if (newFiles.length) addFiles(newFiles);
+  });
 
   // Restore session (position only, do not auto-play)
   const session = await window.api.loadSession();

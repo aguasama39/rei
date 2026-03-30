@@ -233,6 +233,14 @@ ipcMain.handle('load-session', () => {
   catch { return null; }
 });
 
+ipcMain.handle('save-metadata-cache', (_e, d) => {
+  try { fs.writeFileSync(userDataFile('metadata-cache.json'), JSON.stringify(d)); } catch (_) {}
+});
+ipcMain.handle('load-metadata-cache', () => {
+  try { return JSON.parse(fs.readFileSync(userDataFile('metadata-cache.json'), 'utf8')); }
+  catch { return {}; }
+});
+
 // Legacy playlist.json (kept for backward compat / migration)
 const playlistFile      = () => userDataFile('playlist.json');
 const watchedFoldersFile = () => userDataFile('watched-folders.json');
@@ -269,6 +277,11 @@ ipcMain.on('show-file', (_e, filePath) => {
 
 ipcMain.handle('rename-file', (_e, oldPath, newPath) => {
   try { fs.renameSync(oldPath, newPath); return { ok: true, newPath }; }
+  catch (e) { return { ok: false, error: e.message }; }
+});
+
+ipcMain.handle('delete-file', async (_e, filePath) => {
+  try { await shell.trashItem(filePath); return { ok: true }; }
   catch (e) { return { ok: false, error: e.message }; }
 });
 

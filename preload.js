@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('api', {
   loadLibraryData:    ()             => ipcRenderer.invoke('load-library-data'),
   saveSession:        d              => ipcRenderer.invoke('save-session', d),
   loadSession:        ()             => ipcRenderer.invoke('load-session'),
+  saveMetadataCache:  d              => ipcRenderer.invoke('save-metadata-cache', d),
+  loadMetadataCache:  ()             => ipcRenderer.invoke('load-metadata-cache'),
 
   // ── Legacy playlist (kept for migration) ─────────────────────────────────────
   savePlaylist:        paths         => ipcRenderer.invoke('save-playlist', paths),
@@ -26,6 +28,7 @@ contextBridge.exposeInMainWorld('api', {
   // ── File ops ─────────────────────────────────────────────────────────────────
   showFile:           fp             => ipcRenderer.send('show-file', fp),
   renameFile:         (old_, new_)   => ipcRenderer.invoke('rename-file', old_, new_),
+  deleteFile:         fp             => ipcRenderer.invoke('delete-file', fp),
   exportM3U:          tracks         => ipcRenderer.invoke('export-m3u', tracks),
 
   // ── Folder watching ───────────────────────────────────────────────────────────
