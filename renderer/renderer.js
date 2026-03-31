@@ -2,7 +2,7 @@
 // Imports Web Audio engine, library store, and lyrics helpers.
 
 import { initAudioEngine, resumeCtx, fadeGain, getFrequencyData,
-         getPrimaryGain, getSecondaryGain } from './audio-engine.js';
+         getPrimaryGain, getSecondaryGain, getMasterGain } from './audio-engine.js';
 import { loadLibrary, scheduleSave, data as lib,
          isStar, toggleStar, getLabel, setLabel, recordPlay, getBPM, setBPM,
          getPlaylists, getActiveId, setActivePlaylist, createPlaylist,
@@ -778,14 +778,16 @@ function updateSeekGradient() {
 
 // ── Volume ────────────────────────────────────────────────────────────────────
 function setVolume(v) {
-  audio.volume = v;
-  audioB.volume = v;
-  const pct = v * 100;
+  const master = getMasterGain();
+  if (master) master.gain.value = v;
+  else { audio.volume = Math.min(1, v); audioB.volume = Math.min(1, v); }
+  const pct = (v / 1.5) * 100;
   volumeBar.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--surface2) ${pct}%)`;
 }
 
-audio.volume = volumeBar.value / 100;
-setVolume(audio.volume);
+audio.volume = 1;
+audioB.volume = 1;
+setVolume(volumeBar.value / 100);
 
 volumeBar.addEventListener('input', () => setVolume(volumeBar.value / 100));
 
@@ -1221,7 +1223,7 @@ document.addEventListener('keydown', e => {
     case 'ArrowRight': audio.currentTime = Math.min(audio.duration||0, audio.currentTime + 5); break;
     case 'ArrowLeft':  audio.currentTime = Math.max(0, audio.currentTime - 5); break;
     case 'ArrowUp':
-      volumeBar.value = Math.min(100, parseInt(volumeBar.value) + 5);
+      volumeBar.value = Math.min(150, parseInt(volumeBar.value) + 5);
       setVolume(volumeBar.value / 100); break;
     case 'ArrowDown':
       volumeBar.value = Math.max(0, parseInt(volumeBar.value) - 5);
@@ -1265,7 +1267,7 @@ function saveSession() {
   window.api.saveSession({
     filePath:    playlist[currentIndex]?.filePath || null,
     currentTime: audio.currentTime,
-    volume:      audio.volume,
+    volume:      getMasterGain()?.gain.value ?? audio.volume,
     repeatMode,
     shuffleOn,
   });

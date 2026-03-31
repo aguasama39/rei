@@ -31,17 +31,22 @@ export function initAudioEngine(primary, secondary) {
   pSrc.connect(_n.primaryGain);
   sSrc.connect(_n.secondaryGain);
 
+  _n.masterGain = _ctx.createGain();
+  _n.masterGain.gain.value = 0.8;
+
   _n.primaryGain.connect(_n.analyser);
   _n.secondaryGain.connect(_n.analyser);
 
-  _n.analyser.connect(_ctx.destination);
+  _n.analyser.connect(_n.masterGain);
+  _n.masterGain.connect(_ctx.destination);
 }
 
 // ── Accessors ─────────────────────────────────────────────────────────────────
-export const getCtx          = () => _ctx;
-export const getAnalyser     = () => _n.analyser;
-export const getPrimaryGain  = () => _n.primaryGain;
+export const getCtx           = () => _ctx;
+export const getAnalyser      = () => _n.analyser;
+export const getPrimaryGain   = () => _n.primaryGain;
 export const getSecondaryGain = () => _n.secondaryGain;
+export const getMasterGain    = () => _n.masterGain;
 
 /** Resume context after browser autoplay suspension */
 export function resumeCtx() {
