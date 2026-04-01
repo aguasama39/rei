@@ -2,7 +2,7 @@
 // Imports Web Audio engine, library store, and lyrics helpers.
 
 import { initAudioEngine, resumeCtx, fadeGain, getFrequencyData,
-         getPrimaryGain, getSecondaryGain, getMasterGain } from './audio-engine.js';
+         getPrimaryGain, getSecondaryGain } from './audio-engine.js';
 import { loadLibrary, scheduleSave, data as lib,
          isStar, toggleStar, getLabel, setLabel, recordPlay, getBPM, setBPM,
          getPlaylists, getActiveId, setActivePlaylist, createPlaylist,
@@ -320,7 +320,13 @@ function renderPlaylist() {
       <span class="pl-duration">${fmt(track.duration)}</span>
     `;
 
-    li.addEventListener('click',       () => { loadTrack(realIdx); audio.play(); });
+    li.addEventListener('click', async () => {
+      await resumeCtx();
+      loadTrack(realIdx);
+      const pGain = getPrimaryGain();
+      if (pGain) pGain.gain.value = 1;
+      audio.play().catch(() => {});
+    });
     li.addEventListener('contextmenu', e  => showContextMenu(e, realIdx));
     li.addEventListener('dragstart',   onDragStart);
     li.addEventListener('dragover',    onDragOver);
@@ -744,17 +750,18 @@ function getPrevIndex() {
 }
 
 function advanceTrack() {
-  if (repeatMode === 'one') { audio.currentTime = 0; audio.play(); return; }
+  const pGain = getPrimaryGain();
+  if (repeatMode === 'one') { audio.currentTime = 0; if (pGain) pGain.gain.value = 1; audio.play().catch(() => {}); return; }
 
   // Dequeue if something was in queue
   const queued = lib.queue.length > 0 ? dequeue() : null;
   if (queued) {
     const idx = playlist.findIndex(t => t.filePath === queued);
-    if (idx >= 0) { loadTrack(idx); audio.play(); renderQueue(); return; }
+    if (idx >= 0) { loadTrack(idx); if (pGain) pGain.gain.value = 1; audio.play().catch(() => {}); renderQueue(); return; }
   }
 
   const nxt = getNextIndex(true);
-  if (nxt !== null) { loadTrack(nxt); audio.play(); }
+  if (nxt !== null) { loadTrack(nxt); if (pGain) pGain.gain.value = 1; audio.play().catch(() => {}); }
   else setPlayIcon(false);
 }
 
@@ -778,28 +785,26 @@ function updateSeekGradient() {
 
 // ── Volume ────────────────────────────────────────────────────────────────────
 function setVolume(v) {
-  const master = getMasterGain();
-  if (master) master.gain.value = v;
-  else { audio.volume = Math.min(1, v); audioB.volume = Math.min(1, v); }
-  const pct = (v / 1.5) * 100;
+  audio.volume = v;
+  audioB.volume = v;
+  const pct = v * 100;
   volumeBar.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--surface2) ${pct}%)`;
 }
 
-audio.volume = 1;
-audioB.volume = 1;
-setVolume(volumeBar.value / 100);
+audio.volume = volumeBar.value / 100;
+setVolume(audio.volume);
 
 volumeBar.addEventListener('input', () => setVolume(volumeBar.value / 100));
 
 // ── Play / pause (with gain fade) ─────────────────────────────────────────────
-btnPlay.addEventListener('click', () => {
-  resumeCtx();
+btnPlay.addEventListener('click', async () => {
+  await resumeCtx();
   if (playlist.length === 0) return;
-  if (currentIndex === -1) { loadTrack(0); audio.play(); return; }
+  if (currentIndex === -1) { loadTrack(0); audio.play().catch(() => {}); return; }
   if (audio.paused) {
     const pGain = getPrimaryGain();
     if (pGain) { pGain.gain.value = 0; fadeGain(pGain, 1, 0.25); }
-    audio.play();
+    audio.play().catch(() => {});
   } else {
     const pGain = getPrimaryGain();
     if (pGain) fadeGain(pGain, 0, 0.25, () => audio.pause());
@@ -807,11 +812,11 @@ btnPlay.addEventListener('click', () => {
   }
 });
 
-document.getElementById('btn-prev').addEventListener('click', () => {
-  resumeCtx();
+document.getElementById('btn-prev').addEventListener('click', async () => {
+  await resumeCtx();
   if (audio.currentTime > 3) { audio.currentTime = 0; return; }
   const prev = getPrevIndex();
-  if (prev !== null) { loadTrack(prev); audio.play(); }
+  if (prev !== null) { loadTrack(prev); const pGain = getPrimaryGain(); if (pGain) pGain.gain.value = 1; audio.play().catch(() => {}); }
 });
 
 document.getElementById('btn-next').addEventListener('click', () => {
@@ -916,8 +921,8 @@ function showContextMenu(e, index) {
 
 function hideCtxMenu() { ctxMenu.classList.add('hidden'); ctxTarget = -1; }
 
-document.getElementById('ctx-play').addEventListener('click', () => {
-  if (ctxTarget >= 0) { loadTrack(ctxTarget); audio.play(); } hideCtxMenu();
+document.getElementById('ctx-play').addEventListener('click', async () => {
+  if (ctxTarget >= 0) { await resumeCtx(); loadTrack(ctxTarget); const pGain = getPrimaryGain(); if (pGain) pGain.gain.value = 1; audio.play().catch(() => {}); } hideCtxMenu();
 });
 document.getElementById('ctx-next').addEventListener('click', () => {
   const fp = playlist[ctxTarget]?.filePath;
@@ -1223,7 +1228,7 @@ document.addEventListener('keydown', e => {
     case 'ArrowRight': audio.currentTime = Math.min(audio.duration||0, audio.currentTime + 5); break;
     case 'ArrowLeft':  audio.currentTime = Math.max(0, audio.currentTime - 5); break;
     case 'ArrowUp':
-      volumeBar.value = Math.min(150, parseInt(volumeBar.value) + 5);
+      volumeBar.value = Math.min(100, parseInt(volumeBar.value) + 5);
       setVolume(volumeBar.value / 100); break;
     case 'ArrowDown':
       volumeBar.value = Math.max(0, parseInt(volumeBar.value) - 5);
@@ -1267,7 +1272,7 @@ function saveSession() {
   window.api.saveSession({
     filePath:    playlist[currentIndex]?.filePath || null,
     currentTime: audio.currentTime,
-    volume:      getMasterGain()?.gain.value ?? audio.volume,
+    volume:      audio.volume,
     repeatMode,
     shuffleOn,
   });
