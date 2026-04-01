@@ -40,7 +40,6 @@
     },
     "linux": {
       "target": [{ "target": "AppImage", "arch": ["x64"] }],
-      "icon": "assets/icon.ico",
       "category": "Audio"
     }
   },
