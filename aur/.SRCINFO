@@ -1,7 +1,7 @@
 pkgbase = rei-music-bin
 	pkgdesc = A clean dark-themed desktop music player
 	pkgver = 1.2.0
-	pkgrel = 1
+	pkgrel = 2
 	url = https://github.com/aguasama39/rei
 	arch = x86_64
 	license = MIT

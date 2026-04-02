@@ -1,7 +1,7 @@
 # Maintainer: your name <your@email.com>
 pkgname=rei-music-bin
 pkgver=1.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A clean dark-themed desktop music player"
 arch=('x86_64')
 url="https://github.com/aguasama39/rei"
@@ -28,7 +28,7 @@ package() {
     install -d "${pkgdir}/usr/bin"
     cat > "${pkgdir}/usr/bin/rei" <<'EOF'
 #!/bin/sh
-exec /opt/rei/Rei "$@"
+exec /opt/rei/rei "$@"
 EOF
     chmod +x "${pkgdir}/usr/bin/rei"
 
