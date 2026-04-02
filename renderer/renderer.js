@@ -584,6 +584,10 @@ function updateBPMDisplay(bpm) {
   else { bpmBadge.classList.add('hidden'); }
 }
 
+function fileUrl(filePath) {
+  return 'file:///' + filePath.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
+}
+
 // ── Load track ────────────────────────────────────────────────────────────────
 function loadTrack(index, playCrossfade = false) {
   if (index < 0 || index >= playlist.length) return;
@@ -591,7 +595,7 @@ function loadTrack(index, playCrossfade = false) {
   const track  = playlist[index];
 
   if (!playCrossfade) {
-    cf.cur.src = 'file:///' + track.filePath.replace(/\\/g, '/');
+    cf.cur.src = fileUrl(track.filePath);
     cf.cur.load();
   }
 
@@ -689,7 +693,7 @@ function triggerCrossfade() {
   const nextTrack = playlist[nextIdx];
   if (!nextTrack) return;
 
-  cf.next.src = 'file:///' + nextTrack.filePath.replace(/\\/g, '/');
+  cf.next.src = fileUrl(nextTrack.filePath);
   cf.next.load();
   cf.next.play().catch(() => {});
 
@@ -1361,7 +1365,7 @@ document.getElementById('btn-close').addEventListener('click',    () => { saveSe
             updateSeekGradient();
           }, { once: true });
           // Need to load src to get loadedmetadata
-          audio.src = 'file:///' + session.filePath.replace(/\\/g, '/');
+          audio.src = fileUrl(session.filePath);
           audio.load();
         }
       }
