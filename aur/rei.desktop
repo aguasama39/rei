@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Rei
+Comment=A clean dark-themed desktop music player
+Exec=rei %U
+Icon=rei
+Type=Application
+Categories=AudioVideo;Audio;Player;
+MimeType=audio/mpeg;audio/flac;audio/ogg;audio/wav;audio/aac;audio/mp4;
+StartupWMClass=Rei
