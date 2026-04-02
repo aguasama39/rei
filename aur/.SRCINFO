@@ -1,0 +1,19 @@
+pkgbase = rei-music-bin
+	pkgdesc = A clean dark-themed desktop music player
+	pkgver = 1.1.8
+	pkgrel = 1
+	url = https://github.com/aguasama39/rei
+	arch = x86_64
+	license = MIT
+	depends = fuse2
+	depends = libnotify
+	depends = nss
+	depends = libxss
+	depends = libxtst
+	options = !strip
+	source = Rei-1.1.8.AppImage::https://github.com/aguasama39/rei/releases/download/v1.1.8/Rei-1.1.8.AppImage
+	source = rei.desktop
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = rei-music-bin

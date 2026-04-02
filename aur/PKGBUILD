@@ -1,6 +1,6 @@
 # Maintainer: your name <your@email.com>
 pkgname=rei-music-bin
-pkgver=1.1.9
+pkgver=1.1.8
 pkgrel=1
 pkgdesc="A clean dark-themed desktop music player"
 arch=('x86_64')
