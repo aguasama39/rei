@@ -1253,15 +1253,20 @@ function persistActivePlaylist() {
 }
 
 async function addFiles(filePaths) {
+  let added = 0;
   for (const fp of filePaths) {
     if (allTracks.some(t => t.filePath === fp)) continue;
-    const meta = await window.api.readMetadata(fp);
-    allTracks.push(meta);
-    if (!playlist.some(t => t.filePath === fp)) playlist.push(meta);
-    // Cache without albumArt to keep file size small
-    const { albumArt, ...cacheable } = meta;
-    metaCache[fp] = cacheable;
-    scheduleMetaCacheSave();
+    try {
+      const meta = await window.api.readMetadata(fp);
+      allTracks.push(meta);
+      if (!playlist.some(t => t.filePath === fp)) playlist.push(meta);
+      const { albumArt, ...cacheable } = meta;
+      metaCache[fp] = cacheable;
+      scheduleMetaCacheSave();
+      added++;
+      // Render incrementally so tracks appear as they load
+      if (added % 10 === 0) { sortPlaylist(); renderPlaylist(); }
+    } catch { /* skip files that fail to read */ }
   }
   sortPlaylist(); renderPlaylist(); persistActivePlaylist();
   renderBrowse();
